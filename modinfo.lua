@@ -1,5 +1,12 @@
-name = "彩虹光环"
-description = "在你的周围添加一个不断变换颜色的彩虹光环！"
+name = "󰀮󰀏 彩虹光环 󰀏󰀮"
+description = [[
+
+󰀮󰀏夜幕降临，绚烂的彩虹光环将笼罩你的周围，为你带来温暖和希望！
+
+󰀮󰀏夜幕降临了，不要灰心，我会永远守护在你身边，直到黎明！
+
+
+]]
 author = "凌"
 version = "1.0.0"
 
@@ -20,7 +27,7 @@ icon = "modicon.tex"
 -- 模组标签
 server_filter_tags = {
     "buff",
-    "light",
+    "rainbow_halo",
     "彩虹光环",
     "凌"
 }

@@ -6,15 +6,20 @@ Assets = {
 }
 
 -- 获取配置选项
-local LIGHT_RADIUS = GetModConfigData("LIGHT_RADIUS") 
-local COLOR_CHANGE_SPEED = GetModConfigData("COLOR_CHANGE_SPEED")  
-local LIGHT_INTENSITY = GetModConfigData("LIGHT_INTENSITY") 
+local LIGHT_RADIUS = GetModConfigData("LIGHT_RADIUS") or 2
+local COLOR_CHANGE_SPEED = GetModConfigData("COLOR_CHANGE_SPEED") or 3.0
+local LIGHT_INTENSITY = GetModConfigData("LIGHT_INTENSITY") or 0.7
 
 -- 存储每个玩家的光源和任务
 local player_lights = {}
 
 -- 声明RemoveRainbowHalo函数(将在后面定义)
 local RemoveRainbowHalo
+
+-- 打印调试信息
+local function DebugPrint(msg)
+    print("[彩虹光环] " .. tostring(msg))
+end
 
 -- 为玩家添加彩虹光环
 local function AddRainbowHalo(player)
@@ -33,7 +38,13 @@ local function AddRainbowHalo(player)
         light.Light:SetRadius(LIGHT_RADIUS)
         light.Light:SetFalloff(0.9) 
         light.Light:SetIntensity(LIGHT_INTENSITY)
-        light.Light:EnableClientModulation(false) -- 确保白天可见
+        
+        -- 默认在白天禁用光源
+        if not TheWorld.state.isnight then
+            light.Light:Enable(false)
+        else
+            DebugPrint("现在是夜晚，启用光源")
+        end
         
         -- 保存光源引用
         player_lights[player].light = light
@@ -54,6 +65,7 @@ local function AddRainbowHalo(player)
         
         -- 创建自定义光环特效
         local function CreateCustomHaloFX()
+            DebugPrint("正在创建光环特效")
             -- 移除旧的FX(如果存在)
             if player_lights[player].fx and player_lights[player].fx:IsValid() then
                 player_lights[player].fx:Remove()
@@ -70,7 +82,7 @@ local function AddRainbowHalo(player)
             -- 设置动画
             newfx.AnimState:SetBank("halo") -- 设置您的动画bank名称
             newfx.AnimState:SetBuild("halo") -- 设置您的动画build名称
-            newfx.AnimState:PlayAnimation("halo", true) -- 假设您的动画文件有halo动画
+            newfx.AnimState:PlayAnimation("halo", true) -- 使用halo作为动画名称
             
             -- 添加标签，标记为特效
             newfx:AddTag("FX")
@@ -88,42 +100,128 @@ local function AddRainbowHalo(player)
             -- 确保特效不会被保存
             newfx.persists = false
             
+            -- 确保网络同步
+            newfx.entity:SetPristine()
+            
             -- 保存引用
             player_lights[player].fx = newfx
             
             return newfx
         end
         
-        -- 立即创建第一个特效
-        CreateCustomHaloFX()
+        -- 立即检查是否是夜晚，如果是则创建特效
+        if TheWorld.state.isnight then
+            DebugPrint("初始化时检测到夜晚，创建光环")
+            CreateCustomHaloFX()
+        else
+            DebugPrint("初始化时不是夜晚，不创建光环")
+        end
         
-        -- 每秒检查特效是否还存在，如果不存在则重新创建
-        player_lights[player].checktask = TheWorld:DoPeriodicTask(1, function()
-            if not (player_lights[player] and player_lights[player].fx and player_lights[player].fx:IsValid()) then
-                CreateCustomHaloFX()
-            else 
-                -- 确保特效正在播放正确的动画
-                if player_lights[player].fx.AnimState and 
-                   not player_lights[player].fx.AnimState:IsCurrentAnimation("halo") then
-                    player_lights[player].fx.AnimState:PlayAnimation("halo", true)
+        -- 监听日夜变化，只在夜晚显示光环
+        player_lights[player].phasetask = TheWorld:ListenForEvent("phasechanged", function(world, data)
+            -- 安全地检查data和newphase值
+            if data and data.newphase then
+                DebugPrint("检测到相位变化: " .. tostring(data.newphase))
+                
+                if data.newphase == "night" then
+                    -- 夜晚开始，创建光环
+                    DebugPrint("夜晚开始，创建光环")
+                    if not player_lights[player].fx or not player_lights[player].fx:IsValid() then
+                        CreateCustomHaloFX()
+                    end
+                    
+                    -- 显示光源
+                    if player_lights[player].light and player_lights[player].light:IsValid() then
+                        player_lights[player].light.Light:Enable(true)
+                    end
+                else
+                    -- 夜晚结束，移除光环
+                    DebugPrint("夜晚结束，移除光环")
+                    if player_lights[player].fx and player_lights[player].fx:IsValid() then
+                        player_lights[player].fx:Remove()
+                        player_lights[player].fx = nil
+                    end
+                    
+                    -- 隐藏光源
+                    if player_lights[player].light and player_lights[player].light:IsValid() then
+                        player_lights[player].light.Light:Enable(false)
+                    end
+                end
+            else
+                -- data或data.newphase为nil的情况
+                DebugPrint("phasechanged事件触发，但数据无效")
+                
+                -- 直接检查当前是否为夜晚
+                local isNightNow = TheWorld.state.isnight
+                DebugPrint("直接检查当前状态: " .. (isNightNow and "夜晚" or "非夜晚"))
+                
+                -- 根据当前状态更新特效
+                if isNightNow then
+                    if not player_lights[player].fx or not player_lights[player].fx:IsValid() then
+                        CreateCustomHaloFX()
+                    end
+                    
+                    if player_lights[player].light and player_lights[player].light:IsValid() then
+                        player_lights[player].light.Light:Enable(true)
+                    end
+                else
+                    if player_lights[player].fx and player_lights[player].fx:IsValid() then
+                        player_lights[player].fx:Remove()
+                        player_lights[player].fx = nil
+                    end
+                    
+                    if player_lights[player].light and player_lights[player].light:IsValid() then
+                        player_lights[player].light.Light:Enable(false)
+                    end
                 end
             end
         end)
         
-        -- 创建颜色变换任务，非常缓慢
+        -- 添加一个定期检查夜晚状态的任务，以防phasechanged事件未触发
+        player_lights[player].checktask = TheWorld:DoPeriodicTask(1, function()
+            -- 如果是夜晚但没有特效，则创建特效
+            if TheWorld.state.isnight then
+                if not player_lights[player].fx or not player_lights[player].fx:IsValid() then
+                    DebugPrint("周期性检查：是夜晚但没有特效，创建特效")
+                    CreateCustomHaloFX()
+                    
+                    -- 确保光源开启
+                    if player_lights[player].light and player_lights[player].light:IsValid() then
+                        player_lights[player].light.Light:Enable(true)
+                    end
+                end
+            else
+                -- 如果不是夜晚但有特效，则移除
+                if player_lights[player].fx and player_lights[player].fx:IsValid() then
+                    DebugPrint("周期性检查：不是夜晚但有特效，移除特效")
+                    player_lights[player].fx:Remove()
+                    player_lights[player].fx = nil
+                    
+                    -- 确保光源关闭
+                    if player_lights[player].light and player_lights[player].light:IsValid() then
+                        player_lights[player].light.Light:Enable(false)
+                    end
+                end
+            end
+        end)
+        
+        -- 创建颜色变换任务，只在夜晚有效
         player_lights[player].colortask = TheWorld:DoPeriodicTask(COLOR_CHANGE_SPEED, function()
             color_index = color_index % #colors + 1
             local color = colors[color_index]
             
-            -- 设置光源颜色
-            if light and light:IsValid() then
-                light.Light:SetColour(color.r, color.g, color.b)
-            end
-            
-            -- 设置当前特效的颜色(如果存在)
-            if player_lights[player].fx and player_lights[player].fx:IsValid() and 
-               player_lights[player].fx.AnimState then
-                player_lights[player].fx.AnimState:SetMultColour(color.r, color.g, color.b, 0.9)
+            -- 只在夜晚且光源存在时更新颜色
+            if TheWorld.state.isnight then
+                -- 设置光源颜色
+                if player_lights[player].light and player_lights[player].light:IsValid() then
+                    player_lights[player].light.Light:SetColour(color.r, color.g, color.b)
+                end
+                
+                -- 设置当前特效的颜色(如果存在)
+                if player_lights[player].fx and player_lights[player].fx:IsValid() and 
+                   player_lights[player].fx.AnimState then
+                    player_lights[player].fx.AnimState:SetMultColour(color.r, color.g, color.b, 0.9)
+                end
             end
         end)
     end
@@ -134,6 +232,10 @@ RemoveRainbowHalo = function(player)
     if player_lights[player] then
         if player_lights[player].colortask then
             player_lights[player].colortask:Cancel()
+        end
+        
+        if player_lights[player].phasetask then
+            player_lights[player].phasetask:Remove()
         end
         
         if player_lights[player].checktask then
@@ -157,21 +259,33 @@ AddPlayerPostInit(function(inst)
     if TheWorld.ismastersim then
         -- 延迟一秒添加光环，确保玩家已完全加载
         inst:DoTaskInTime(1, function()
+            DebugPrint("正在为玩家 " .. tostring(inst) .. " 添加彩虹光环")
+            
+            -- 调试输出当前时间状态
+            if TheWorld.state.isnight then
+                DebugPrint("当前是夜晚")
+            else
+                DebugPrint("当前不是夜晚")
+            end
+            
             AddRainbowHalo(inst)
         end)
         
         -- 监听事件，确保光环在各种情况下都正确显示
         inst:ListenForEvent("death", function()
+            DebugPrint("玩家死亡，移除光环")
             RemoveRainbowHalo(inst)
         end)
         
         inst:ListenForEvent("respawnfromghost", function()
+            DebugPrint("玩家复活，重新添加光环")
             inst:DoTaskInTime(1, function()
                 AddRainbowHalo(inst)
             end)
         end)
         
         inst:ListenForEvent("onremove", function()
+            DebugPrint("玩家移除，清理光环")
             RemoveRainbowHalo(inst)
         end)
     end
