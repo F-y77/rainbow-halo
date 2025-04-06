@@ -9,6 +9,8 @@ Assets = {
 local LIGHT_RADIUS = GetModConfigData("LIGHT_RADIUS") or 2
 local COLOR_CHANGE_SPEED = GetModConfigData("COLOR_CHANGE_SPEED") or 3.0
 local LIGHT_INTENSITY = GetModConfigData("LIGHT_INTENSITY") or 0.7
+local SHOW_NIGHT_MESSAGE = GetModConfigData("SHOW_NIGHT_MESSAGE") -- 是否显示夜晚守护消息
+local ENABLE_DEBUG_LOG = GetModConfigData("ENABLE_DEBUG_LOG") -- 是否输出调试日志
 
 -- 存储每个玩家的光源和任务
 local player_lights = {}
@@ -16,9 +18,14 @@ local player_lights = {}
 -- 声明RemoveRainbowHalo函数(将在后面定义)
 local RemoveRainbowHalo
 
+-- 夜晚守护消息
+local NIGHT_MESSAGE = "󰀮󰀏夜幕降临了，不要灰心，我会永远守护在你身边，直到黎明！"
+
 -- 打印调试信息
 local function DebugPrint(msg)
-    print("[彩虹光环] " .. tostring(msg))
+    if ENABLE_DEBUG_LOG then
+        print("[彩虹光环] " .. tostring(msg))
+    end
 end
 
 -- 为玩家添加彩虹光环
@@ -109,10 +116,19 @@ local function AddRainbowHalo(player)
             return newfx
         end
         
+        -- 显示夜晚守护消息
+        local function ShowNightMessage()
+            if SHOW_NIGHT_MESSAGE and player and player.components and player.components.talker then
+                player.components.talker:Say(NIGHT_MESSAGE)
+            end
+        end
+        
         -- 立即检查是否是夜晚，如果是则创建特效
         if TheWorld.state.isnight then
             DebugPrint("初始化时检测到夜晚，创建光环")
             CreateCustomHaloFX()
+            -- 如果是夜晚且玩家刚加入，显示守护消息
+            ShowNightMessage()
         else
             DebugPrint("初始化时不是夜晚，不创建光环")
         end
@@ -134,6 +150,9 @@ local function AddRainbowHalo(player)
                     if player_lights[player].light and player_lights[player].light:IsValid() then
                         player_lights[player].light.Light:Enable(true)
                     end
+                    
+                    -- 显示夜晚守护消息
+                    ShowNightMessage()
                 else
                     -- 夜晚结束，移除光环
                     DebugPrint("夜晚结束，移除光环")
@@ -164,6 +183,9 @@ local function AddRainbowHalo(player)
                     if player_lights[player].light and player_lights[player].light:IsValid() then
                         player_lights[player].light.Light:Enable(true)
                     end
+                    
+                    -- 显示夜晚守护消息
+                    ShowNightMessage()
                 else
                     if player_lights[player].fx and player_lights[player].fx:IsValid() then
                         player_lights[player].fx:Remove()
@@ -180,7 +202,13 @@ local function AddRainbowHalo(player)
         -- 添加一个定期检查夜晚状态的任务，以防phasechanged事件未触发
         player_lights[player].checktask = TheWorld:DoPeriodicTask(1, function()
             -- 如果是夜晚但没有特效，则创建特效
-            if TheWorld.state.isnight then
+            local wasNight = player_lights[player].isnight
+            local isNightNow = TheWorld.state.isnight
+            
+            -- 保存当前夜晚状态
+            player_lights[player].isnight = isNightNow
+            
+            if isNightNow then
                 if not player_lights[player].fx or not player_lights[player].fx:IsValid() then
                     DebugPrint("周期性检查：是夜晚但没有特效，创建特效")
                     CreateCustomHaloFX()
@@ -188,6 +216,11 @@ local function AddRainbowHalo(player)
                     -- 确保光源开启
                     if player_lights[player].light and player_lights[player].light:IsValid() then
                         player_lights[player].light.Light:Enable(true)
+                    end
+                    
+                    -- 如果刚变成夜晚，显示守护消息
+                    if wasNight == false then
+                        ShowNightMessage()
                     end
                 end
             else

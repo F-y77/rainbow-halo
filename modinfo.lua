@@ -8,7 +8,7 @@ description = [[
 
 ]]
 author = "凌"
-version = "1.0.0"
+version = "1.0.2"
 
 -- 兼容性
 dst_compatible = true
@@ -70,5 +70,23 @@ configuration_options = {
             {description = "亮", data = 1,   hover = "立方体"},
         },
         default = 0.5,
+    },
+    {
+        name = "SHOW_NIGHT_MESSAGE",
+        label = "显示守护消息",
+        options = {
+            {description = "开启", data = true, hover = "夜晚降临时显示守护消息"},
+            {description = "关闭", data = false, hover = "不显示消息"},
+        },
+        default = true,
+    },
+    {
+        name = "ENABLE_DEBUG_LOG",
+        label = "调试日志输出",
+        options = {
+            {description = "开启", data = true, hover = "输出调试日志信息"},
+            {description = "关闭", data = false, hover = "不输出调试日志"},
+        },
+        default = false,
     }
 } 
