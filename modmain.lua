@@ -240,6 +240,7 @@ local function AddRainbowHalo(player)
         
         -- 创建颜色变换任务，只在夜晚有效
         player_lights[player].colortask = TheWorld:DoPeriodicTask(COLOR_CHANGE_SPEED, function()
+            -- 计算下一个颜色索引
             color_index = color_index % #colors + 1
             local color = colors[color_index]
             

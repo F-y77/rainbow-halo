@@ -52,6 +52,10 @@ configuration_options = {
         name = "COLOR_CHANGE_SPEED",
         label = "颜色变换速度",
         options = {
+            {description = "超级静止", data = 10, hover = "几乎无法察觉的变化"},
+            {description = "静止如画", data = 8, hover = "仿佛时间凝固"},
+            {description = "缓如星移", data = 6, hover = "如同星辰变换"},
+            {description = "轻柔舒缓", data = 4, hover = "非常和谐的变换"},
             {description = "最慢", data = 3, hover = "大幅度减少闪烁感"},
             {description = "极慢", data = 2, hover = "减少闪烁感"},
             {description = "慢", data = 1.5, hover = "默认设置"},
