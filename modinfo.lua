@@ -32,16 +32,20 @@ configuration_options = {
         label = "光环半径",
         options = {
             {description = "小", data = 1.5},
-            {description = "中", data = 2, hover = "默认设置"},
+            {description = "中", data = 2},
             {description = "大", data = 3},
-            {description = "超大", data = 4}
+            {description = "超大", data = 4},
+            {description = "巨大", data = 5},
+            {description = "豪华", data = 6},
+            {description = "天际", data = 7},
         },
-        default = 2,
+        default = 6,
     },
     {
         name = "COLOR_CHANGE_SPEED",
         label = "颜色变换速度",
         options = {
+            {description = "最慢", data = 3, hover = "大幅度减少闪烁感"},
             {description = "极慢", data = 2, hover = "减少闪烁感"},
             {description = "慢", data = 1.5, hover = "默认设置"},
             {description = "中", data = 1},
@@ -53,10 +57,11 @@ configuration_options = {
         name = "LIGHT_INTENSITY",
         label = "光环亮度",
         options = {
-            {description = "暗", data = 0.5},
-            {description = "中", data = 0.8, hover = "默认设置"},
-            {description = "亮", data = 1},
+            {description = "阴暗", data = 0.5, hover = "阴暗的氛围感"},
+            {description = "暗", data = 0.5, hover = "氛围感"},
+            {description = "中", data = 0.8, hover = "球体"},
+            {description = "亮", data = 1,   hover = "立方体"},
         },
-        default = 0.3,
+        default = 0.5,
     }
 } 
